@@ -11,11 +11,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LocationServiceTest {
@@ -48,7 +55,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetAll_FromCache() {
+    void testGetAllWhenCachedReturnsCachedData() {
         when(locationCache.containsKey("all_locations")).thenReturn(true);
         when(locationCache.get("all_locations")).thenReturn(List.of(location));
 
@@ -60,7 +67,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetAll_FromDatabase() {
+    void testGetAllWhenNotCachedReturnsDatabaseData() {
         when(locationCache.containsKey("all_locations")).thenReturn(false);
         when(locationRepository.findAll()).thenReturn(List.of(location));
 
@@ -72,7 +79,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetById_FromCache() {
+    void testGetByIdWhenCachedReturnsCachedData() {
         when(locationCache.containsKey("location_1")).thenReturn(true);
         when(locationCache.get("location_1")).thenReturn(List.of(location));
 
@@ -84,7 +91,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetById_FromDatabase() {
+    void testGetByIdWhenNotCachedReturnsDatabaseData() {
         when(locationCache.containsKey("location_1")).thenReturn(false);
         when(locationRepository.findById(1L)).thenReturn(Optional.of(location));
 
@@ -96,7 +103,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetById_NotFound() {
+    void testGetByIdWhenNotFoundReturnsEmpty() {
         when(locationCache.containsKey("location_1")).thenReturn(false);
         when(locationRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -106,7 +113,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testCreate() {
+    void testCreateWithSunriseSunsetIdsAddsRelationsAndClearsCache() {
         when(sunriseSunsetRepository.findAllById(List.of(1L))).thenReturn(List.of(sunriseSunset));
         when(locationRepository.save(any(Location.class))).thenReturn(location);
 
@@ -118,7 +125,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testUpdate_Success() {
+    void testUpdateWhenExistsUpdatesDataAndClearsCache() {
         Location updatedData = new Location();
         updatedData.setName("Updated Name");
         updatedData.setCountry("Updated Country");
@@ -137,7 +144,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testUpdate_NotFound() {
+    void testUpdateWhenNotFoundReturnsEmpty() {
         when(locationRepository.findById(1L)).thenReturn(Optional.empty());
 
         Optional<Location> result = locationService.update(1L, location, List.of(1L));
@@ -146,7 +153,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testDelete_Success() {
+    void testDeleteWhenExistsDeletesAndClearsCache() {
         when(locationRepository.findById(1L)).thenReturn(Optional.of(location));
 
         boolean result = locationService.delete(1L);
@@ -157,7 +164,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testDelete_NotFound() {
+    void testDeleteWhenNotFoundReturnsFalse() {
         when(locationRepository.findById(1L)).thenReturn(Optional.empty());
 
         boolean result = locationService.delete(1L);
@@ -167,7 +174,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetLocationsByDate_FromCache() {
+    void testGetLocationsByDateWhenCachedReturnsCachedData() {
         when(locationCache.containsKey("locations_date_2025-04-04")).thenReturn(true);
         when(locationCache.get("locations_date_2025-04-04")).thenReturn(List.of(location));
 
@@ -179,7 +186,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testGetLocationsByDate_FromDatabase() {
+    void testGetLocationsByDateWhenNotCachedReturnsDatabaseData() {
         when(locationCache.containsKey("locations_date_2025-04-04")).thenReturn(false);
         when(locationRepository.findLocationsBySunriseSunsetDate("2025-04-04")).thenReturn(List.of(location));
 
@@ -191,7 +198,7 @@ class LocationServiceTest {
     }
 
     @Test
-    void testBulkCreateOrUpdate() {
+    void testBulkCreateOrUpdateProcessesNewAndExistingLocations() {
         Location newLocation = new Location();
         newLocation.setName("New Location");
         newLocation.setCountry("New Country");
